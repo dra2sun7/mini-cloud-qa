@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mini-cloud-qa"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "sqlalchemy>=2.0",
+    "typer>=0.12",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# 테스트할 때만 필요한 라이브러리. pip install -e ".[dev]"로 설치한다
+dev = ["pytest>=8"]
+
+[project.scripts]
+mini-cloud = "service.cli:app"
+
+[tool.setuptools]
+packages = ["service"]
+
+[tool.pytest.ini_options]
+# 테스트 파일을 찾을 폴더
+testpaths = ["tests"]
+# tests 폴더에서 service, tests를 import할 수 있게 한다
+pythonpath = ["."]
