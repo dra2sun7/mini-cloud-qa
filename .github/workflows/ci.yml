@@ -1,0 +1,69 @@
+# Run the API server and all tests on every PR and every push to main.
+# Uses SQLite until Docker Compose (step 9) is added,
+# so F-004 (SQLite reuses deleted ids) is reported as XFAIL.
+#
+# [custom] = a name we chose ourselves (safe to rename)
+# Everything else (on, jobs, steps, uses, run, ...) is GitHub Actions syntax (do not rename)
+
+name: Mini Cloud QA Tests                 # [custom] workflow name (shown in the Actions tab)
+
+on:
+  pull_request:
+  push:
+    branches: [main]                      # our branch name
+
+jobs:
+  api-cli-test:                           # [custom] job ID (letters, numbers, -, _ only)
+    name: API and CLI tests (SQLite)      # [custom] job display name
+    runs-on: ubuntu-latest
+
+    env:
+      # Shorten state transitions to 1 second so the tests finish quickly.
+      # These names must match what our code reads (config.py, helpers.py).
+      PROVISION_SECONDS: "1"
+      DELETE_SECONDS: "1"
+      MINICLOUD_API_URL: http://localhost:8000
+
+    steps:
+      - name: Step 1 - Check out code               # [custom] step name
+        uses: actions/checkout@v4
+
+      - name: Step 2 - Set up Python 3.12           # [custom]
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Step 3 - Install dependencies         # [custom]
+        run: pip install -e ".[dev]"
+
+      - name: Step 4 - Start API server             # [custom]
+        run: nohup python -m uvicorn service.main:app --port 8000 > server.log 2>&1 &
+
+      - name: Step 5 - Wait for API server          # [custom]
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "API server is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API server did not start"
+          cat server.log
+          exit 1
+
+      - name: Step 6 - Run pytest                   # [custom]
+        run: pytest -v --junitxml=test-results.xml
+
+      - name: Step 7 - Show server log on failure   # [custom]
+        if: failure()
+        run: cat server.log
+
+      - name: Step 8 - Upload test results          # [custom]
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mini-cloud-test-results   # [custom] artifact name (download name)
+          path: |
+            test-results.xml
+            server.log
