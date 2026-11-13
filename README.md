@@ -63,11 +63,34 @@ stateDiagram-v2
 - 409: 리소스는 있지만 현재 상태에서 허용되지 않는 동작 / 404: 리소스 없음 / 202: 요청을 받아 처리 중
 - 시작·중지·삭제 응답에는 요청 직전 상태 `previous_status`가 함께 담깁니다.
 
-### 볼륨
+### 볼륨 상태
+
+```mermaid
+stateDiagram-v2
+    [*] --> AVAILABLE: 생성
+    AVAILABLE --> IN_USE: 연결 (VM이 STOPPED)
+    IN_USE --> AVAILABLE: 해제 (VM이 STOPPED) / VM 삭제 완료 (기본)
+    IN_USE --> DELETING: VM 삭제 완료 (delete_volumes=true)
+    AVAILABLE --> DELETING: 삭제
+    DELETING --> [*]: 삭제 완료 (조회 시 404)
+```
 
 - 볼륨 하나는 VM 하나에만 연결되고, 연결·해제는 VM이 `STOPPED`일 때만 가능합니다.
 - 사용 중(`IN_USE`)인 볼륨은 해제하기 전에 삭제할 수 없습니다 (409).
-- 볼륨이 연결된 VM을 삭제할 때의 동작은 아래 결정 테이블을 따릅니다.
+- VM이 삭제되는 동안(`DELETING`) 볼륨은 `IN_USE`로 남고, VM 삭제가 끝나는 시점에 해제되거나 함께 삭제됩니다.
+
+### 볼륨 상태 전이표
+
+연결·해제는 대상 VM이 `STOPPED`라고 가정한 결과입니다. 단, 이미 연결된 같은 VM에 다시 연결하는 경우는 VM 상태와 관계없이 200입니다 (설계 결정 12).
+
+| 볼륨 상태 | 연결 (같은 VM) | 연결 (다른 VM) | 해제 | 삭제 |
+|---|---|---|---|---|
+| `AVAILABLE` | 200 → `IN_USE` | 200 → `IN_USE` | 200 (이미 해제됨) | 202 → `DELETING` |
+| `IN_USE` | 200 (이미 연결됨) | 409 | 200 → `AVAILABLE` | 409 |
+| `DELETING` | 409 | 409 | 409 | 202 (`DELETING` 유지) |
+| (삭제 완료) | 404 | 404 | 404 | 404 |
+
+### 볼륨이 연결된 VM의 삭제 (결정 테이블)
 
 | 볼륨 연결됨 | `delete_volumes` | VM 결과 | 볼륨 결과 |
 |---|---|---|---|
