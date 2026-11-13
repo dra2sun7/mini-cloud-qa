@@ -124,8 +124,8 @@ def start_vm(vm_id: int, session: Session = Depends(get_session)):
     vm = get_vm_or_404(session, vm_id)
     previous = vm.status
     # 설계 결정 10: 이미 실행 중이면 아무것도 바꾸지 않고 성공
-    # if vm.status == VM_RUNNING:                  CI 에러 발생 유도
-    #     return action_result(vm, previous)       CI 에러 발생 유도
+    if vm.status == VM_RUNNING:                  CI 에러 발생 유도
+        return action_result(vm, previous)       CI 에러 발생 유도
     # 허용 목록: STOPPED일 때만 시작할 수 있다
     if vm.status != VM_STOPPED:
         raise conflict(f"VM {vm_id} cannot be started in {vm.status} state")
