@@ -7,11 +7,11 @@
 
 ```mermaid
 flowchart LR
-    CI[GitHub Actions] --> Test[pytest<br/>API · CLI 테스트]
-    Test -->|HTTP| API[Mini Cloud API<br/>FastAPI]
-    CLI[CLI] -->|HTTP| API
+    CI["GitHub Actions"] --> Test["pytest<br/>API, CLI 테스트"]
+    Test -->|"HTTP"| API["Mini Cloud API<br/>FastAPI"]
+    CLI["CLI"] -->|"HTTP"| API
     Test --> CLI
-    API --> DB[(SQLite)]
+    API --> DB[("SQLite")]
 ```
 
 | 구분 | 내용 |
